@@ -4,27 +4,54 @@ import java.util.concurrent.locks.LockSupport;
 
 public class FutureTask<V> implements RunnableFuture<V> {
 
+    /**
+     * 当前状态、没有一个表示 ing的状态
+     */
     private volatile int state;
+    /**
+     * 新建
+     */
     private static final int NEW          = 0;
+    /**
+     * 正在等待设置返回值
+     */
     private static final int COMPLETING   = 1;
+    /**
+     * 正常
+     */
     private static final int NORMAL       = 2;
+    /**
+     * 任务本身发生了异常
+     */
     private static final int EXCEPTIONAL  = 3;
+    /**
+     * 当前任务被取消
+     */
     private static final int CANCELLED    = 4;
+    /**
+     * 终端中
+     */
     private static final int INTERRUPTING = 5;
+    /**
+     * 已中断
+     */
     private static final int INTERRUPTED  = 6;
 
     /**
      * 被执行的任务
+     * runable 会被适配成 callable
      */
     private Callable<V> callable;
     /**
      * 返回的结果
+     * 1·正常结果
+     * 2·保存异常
      */
     private Object outcome; // non-volatile, protected by state reads/writes
     /** The thread running the callable; CASed during run() */
     private volatile Thread runner;
     /**
-     * get方法阻塞的线程队列
+     * get方法阻塞的线程队列 头插头取
      */
     private volatile WaitNode waiters;
 
@@ -165,12 +192,18 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     public void run() {
+        /**
+         * 当前线程抢占task成功、runner 被设置成 Thread.currentThread()
+         */
         if (state != NEW ||
             !UNSAFE.compareAndSwapObject(this, runnerOffset,
                                          null, Thread.currentThread()))
             return;
         try {
             Callable<V> c = callable;
+            /**
+             * 防止别的线程cancel当前的task
+             */
             if (c != null && state == NEW) {
                 V result;
                 boolean ran;

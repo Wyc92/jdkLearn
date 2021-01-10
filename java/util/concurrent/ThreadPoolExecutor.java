@@ -24,6 +24,13 @@ import java.util.*;
  * TERMINATED：线程池彻底终止，就变成TERMINATED状态
  * 线程池处在TIDYING状态时，执行完terminated()之后，就会由 TIDYING -> TERMINATED
  */
+
+
+/**
+ * execute
+ * submit 会将 runable 或者callable 封装成 FutureTask 然后调用execute ，然后返回 FutureTask
+ * FutureTask实现了runable和 Future
+ */
 public class ThreadPoolExecutor extends AbstractExecutorService {
     /**
      * 低29位表示线程池中处于RUNNING状态的线程个数，高3位表示线程池所处的状态
