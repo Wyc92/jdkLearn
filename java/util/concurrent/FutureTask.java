@@ -1,94 +1,9 @@
-/*
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
-/*
- *
- *
- *
- *
- *
- * Written by Doug Lea with assistance from members of JCP JSR-166
- * Expert Group and released to the public domain, as explained at
- * http://creativecommons.org/publicdomain/zero/1.0/
- */
-
 package java.util.concurrent;
 import java.util.concurrent.locks.LockSupport;
 
-/**
- * A cancellable asynchronous computation.  This class provides a base
- * implementation of {@link Future}, with methods to start and cancel
- * a computation, query to see if the computation is complete, and
- * retrieve the result of the computation.  The result can only be
- * retrieved when the computation has completed; the {@code get}
- * methods will block if the computation has not yet completed.  Once
- * the computation has completed, the computation cannot be restarted
- * or cancelled (unless the computation is invoked using
- * {@link #runAndReset}).
- *
- * <p>A {@code FutureTask} can be used to wrap a {@link Callable} or
- * {@link Runnable} object.  Because {@code FutureTask} implements
- * {@code Runnable}, a {@code FutureTask} can be submitted to an
- * {@link Executor} for execution.
- *
- * <p>In addition to serving as a standalone class, this class provides
- * {@code protected} functionality that may be useful when creating
- * customized task classes.
- *
- * @since 1.5
- * @author Doug Lea
- * @param <V> The result type returned by this FutureTask's {@code get} methods
- */
-public class FutureTask<V> implements RunnableFuture<V> {
-    /*
-     * Revision notes: This differs from previous versions of this
-     * class that relied on AbstractQueuedSynchronizer, mainly to
-     * avoid surprising users about retaining interrupt status during
-     * cancellation races. Sync control in the current design relies
-     * on a "state" field updated via CAS to track completion, along
-     * with a simple Treiber stack to hold waiting threads.
-     *
-     * Style note: As usual, we bypass overhead of using
-     * AtomicXFieldUpdaters and instead directly use Unsafe intrinsics.
-     */
 
-    /**
-     * The run state of this task, initially NEW.  The run state
-     * transitions to a terminal state only in methods set,
-     * setException, and cancel.  During completion, state may take on
-     * transient values of COMPLETING (while outcome is being set) or
-     * INTERRUPTING (only while interrupting the runner to satisfy a
-     * cancel(true)). Transitions from these intermediate to final
-     * states use cheaper ordered/lazy writes because values are unique
-     * and cannot be further modified.
-     *
-     * Possible state transitions:
-     * NEW -> COMPLETING -> NORMAL
-     * NEW -> COMPLETING -> EXCEPTIONAL
-     * NEW -> CANCELLED
-     * NEW -> INTERRUPTING -> INTERRUPTED
-     */
+public class FutureTask<V> implements RunnableFuture<V> {
+
     private volatile int state;
     private static final int NEW          = 0;
     private static final int COMPLETING   = 1;
@@ -98,21 +13,28 @@ public class FutureTask<V> implements RunnableFuture<V> {
     private static final int INTERRUPTING = 5;
     private static final int INTERRUPTED  = 6;
 
-    /** The underlying callable; nulled out after running */
+    /**
+     * 被执行的任务
+     */
     private Callable<V> callable;
-    /** The result to return or exception to throw from get() */
+    /**
+     * 返回的结果
+     */
     private Object outcome; // non-volatile, protected by state reads/writes
     /** The thread running the callable; CASed during run() */
     private volatile Thread runner;
-    /** Treiber stack of waiting threads */
+    /**
+     * get方法阻塞的线程队列
+     */
     private volatile WaitNode waiters;
 
     /**
-     * Returns result or throws exception for completed task.
-     *
-     * @param s completed state value
+     * 获取返回的结果
+     * 1 正常结果，2·线程被取消，3 任务本身的异常
+     * @param s
+     * @return
+     * @throws ExecutionException
      */
-    @SuppressWarnings("unchecked")
     private V report(int s) throws ExecutionException {
         Object x = outcome;
         if (s == NORMAL)
@@ -123,11 +45,8 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Creates a {@code FutureTask} that will, upon running, execute the
-     * given {@code Callable}.
-     *
-     * @param  callable the callable task
-     * @throws NullPointerException if the callable is null
+     * 构造方法
+     * @param callable
      */
     public FutureTask(Callable<V> callable) {
         if (callable == null)
@@ -137,16 +56,9 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Creates a {@code FutureTask} that will, upon running, execute the
-     * given {@code Runnable}, and arrange that {@code get} will return the
-     * given result on successful completion.
-     *
-     * @param runnable the runnable task
-     * @param result the result to return on successful completion. If
-     * you don't need a particular result, consider using
-     * constructions of the form:
-     * {@code Future<?> f = new FutureTask<Void>(runnable, null)}
-     * @throws NullPointerException if the runnable is null
+     * 构造方法
+     * @param runnable
+     * @param result
      */
     public FutureTask(Runnable runnable, V result) {
         this.callable = Executors.callable(runnable, result);
@@ -358,8 +270,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Removes and signals all waiting threads, invokes done(), and
-     * nulls out callable.
+     *去唤醒get方法阻塞的线程
      */
     private void finishCompletion() {
         // assert state > COMPLETING;
