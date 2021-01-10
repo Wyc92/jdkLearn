@@ -331,34 +331,41 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Awaits completion or aborts on interrupt or timeout.
      *
-     * @param timed true if use timed waits
-     * @param nanos time to wait, if timed
-     * @return state upon completion
+     * @param timed
+     * @param nanos
+     * @return
+     * @throws InterruptedException
      */
     private int awaitDone(boolean timed, long nanos)
         throws InterruptedException {
         final long deadline = timed ? System.nanoTime() + nanos : 0L;
+        //当前线程
         WaitNode q = null;
+        //表示当前线程有没有入队
         boolean queued = false;
         for (;;) {
+            // 第四次、1 被其他线程interrupt
             if (Thread.interrupted()) {
                 removeWaiter(q);
                 throw new InterruptedException();
             }
 
+            // 第四次、2 被其他线程 unpark
             int s = state;
             if (s > COMPLETING) {
                 if (q != null)
                     q.thread = null;
                 return s;
             }
+            //马上就要结束了，yield
             else if (s == COMPLETING) // cannot time out yet
                 Thread.yield();
             else if (q == null)
+                //第一次自旋
                 q = new WaitNode();
             else if (!queued)
+                //第二次自旋 已经创建了WaitNode 但是还未入队、此处进行入队
                 queued = UNSAFE.compareAndSwapObject(this, waitersOffset,
                                                      q.next = waiters, q);
             else if (timed) {
@@ -370,6 +377,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
                 LockSupport.parkNanos(this, nanos);
             }
             else
+                // 第三次自旋 ，park
                 LockSupport.park(this);
         }
     }
