@@ -391,15 +391,13 @@ public class Executors {
     }
 
     /**
-     * Returns a {@link Callable} object that, when
-     * called, runs the given task and returns the given result.  This
-     * can be useful when applying methods requiring a
-     * {@code Callable} to an otherwise resultless action.
-     * @param task the task to run
-     * @param result the result to return
-     * @param <T> the type of the result
-     * @return a callable object
-     * @throws NullPointerException if task null
+     * 将Runnable 适配成callble
+     * call()方法实际调用的是 run()  注意不是 start
+     * 并且提供了一个result作为返回值   这个返回值和Runnable 无关
+     * @param task
+     * @param result
+     * @param <T>
+     * @return
      */
     public static <T> Callable<T> callable(Runnable task, T result) {
         if (task == null)
